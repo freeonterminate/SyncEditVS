@@ -1,0 +1,10 @@
+{
+    "displayName": "SyncEdit（同期編集）",
+    "description": "Delphi の SyncEdit を実現する VSCode 拡張機能",
+    "command.start": "同期編集を開始",
+    "command.cancel": "同期編集を終了",
+    "command.nextWord": "次の単語へ移動",
+    "config.colorPreset.description": "プリセットカラーセットを使用します。「custom」を選ぶと以下の色設定が有効になります。",
+    "config.wordTextColor.description": "強調表示された単語の文字色（RGBA 形式）",
+    "config.regionBackgroundColor.description": "選択範囲全体の背景色（RGBA 形式）"
+}

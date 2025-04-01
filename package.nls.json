@@ -1,0 +1,10 @@
+{
+    "displayName": "SyncEdit",
+    "description": "VSCode extension that mimics Delphi's SyncEdit",
+    "command.start": "Start SyncEdit",
+    "command.cancel": "Cancel SyncEdit",
+    "command.nextWord": "Next Word",
+    "config.colorPreset.description": "Use a preset color set. Choose 'custom' to use the color settings below.",
+    "config.wordTextColor.description": "Text color for highlighted words (RGBA format)",
+    "config.regionBackgroundColor.description": "Background color for selected region (RGBA format)"
+}

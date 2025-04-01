@@ -1,0 +1,107 @@
+{
+  "name": "sync-edit",
+  "displayName": "%displayName%",
+  "description": "%description%",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "sync-edit.start",
+        "title": "%command.start%"
+      },
+      {
+        "command": "sync-edit.cancel",
+        "title": "%command.cancel%"
+      },
+      {
+        "command": "sync-edit.nextWord",
+        "title": "%command.nextWord%"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "sync-edit.start",
+        "key": "ctrl+shift+j",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "sync-edit.nextWord",
+        "key": "tab",
+        "when": "editorTextFocus && syncEditMode"
+      },
+      {
+        "command": "sync-edit.cancel",
+        "key": "escape",
+        "when": "editorTextFocus && syncEditMode"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "SyncEdit",
+      "properties": {
+        "syncEdit.colorPreset": {
+          "type": "string",
+          "enum": [
+            "custom",
+            "dark",
+            "light",
+            "highcontrast",
+            "fun"
+          ],
+          "default": "custom",
+          "description": "%config.colorPreset.description%"
+        },
+        "syncEdit.wordTextColor": {
+          "type": "string",
+          "default": "#ff3399",
+          "description": "%config.wordTextColor.description%",
+          "format": "color"
+        },
+        "syncEdit.regionBackgroundColor": {
+          "type": "string",
+          "default": "#264f78aa",
+          "description": "%config.regionBackgroundColor.description%",
+          "format": "color"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.23.0",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "vscode-nls": "^5.2.0"
+  }
+}

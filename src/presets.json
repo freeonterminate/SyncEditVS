@@ -1,0 +1,18 @@
+{
+    "dark": {
+        "wordText": "#ff3399",
+        "regionBg": "#264f78aa"
+    },
+    "light": {
+        "wordText": "#ff3399",
+        "regionBg": "#99c2eaaa"
+    },
+    "highcontrast": {
+        "wordText": "#ff3399",
+        "regionBg": "#000000cc"
+    },
+    "fun": {
+        "wordText": "#ff3399",
+        "regionBg": "#d7a8e8aa"
+    }
+}
