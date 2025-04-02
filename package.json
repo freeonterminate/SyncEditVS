@@ -3,7 +3,7 @@
   "displayName": "%displayName%",
   "description": "%description%",
   "publisher": "piksware",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "engines": {
     "vscode": "^1.98.0"
   },
@@ -55,11 +55,11 @@
         "syncEdit.colorPreset": {
           "type": "string",
           "enum": [
-            "custom",
+            "fun",
             "dark",
             "light",
-            "highcontrast",
-            "fun"
+            "high-contrast",
+            "custom"
           ],
           "default": "custom",
           "description": "%config.colorPreset.description%"

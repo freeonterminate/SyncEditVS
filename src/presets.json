@@ -1,4 +1,8 @@
 {
+    "fun": {
+        "wordText": "#ff6699",
+        "regionBg": "#d7a8e822"
+    },
     "dark": {
         "wordText": "#ff3399",
         "regionBg": "#264f78aa"
@@ -7,12 +11,8 @@
         "wordText": "#ff3399",
         "regionBg": "#99c2eaaa"
     },
-    "highcontrast": {
+    "high-contrast": {
         "wordText": "#ff3399",
         "regionBg": "#000000cc"
-    },
-    "fun": {
-        "wordText": "#ff3399",
-        "regionBg": "#d7a8e8aa"
     }
 }
