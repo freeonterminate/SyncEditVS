@@ -61,7 +61,7 @@
             "high-contrast",
             "custom"
           ],
-          "default": "custom",
+          "default": "fun",
           "description": "%config.colorPreset.description%"
         },
         "syncEdit.wordTextColor": {
