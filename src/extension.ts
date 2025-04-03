@@ -6,7 +6,7 @@ const localize = vscode.l10n.t;
 
 let words: { word: string, selections: vscode.Selection[] }[] = [];
 let current = 0;
-let editor: vscode.TextEditor | undefined = undefined;
+let editor: vscode.TextEditor | undefined;
 let wordDeco: vscode.TextEditorDecorationType | undefined;
 let backDeco: vscode.TextEditorDecorationType | undefined;
 let orgRegion: vscode.Range | undefined;
@@ -14,16 +14,16 @@ let editMode = false;
 let prevNotEmpty = false;
 
 // マッチする単語を探す
-function StartOrNext() {
+function FindWords() {
 	if (!editor || !orgRegion) {
-		return [];
+		return;
 	}
 
 	const doc = editor.document;
 	const selectedText = doc.getText(orgRegion);
 
 	if (!selectedText) {
-		return [];
+		return;
 	}
 
 	// 単語を探す
@@ -51,6 +51,15 @@ function StartOrNext() {
 			);
 		})
 	}));
+}
+
+// 開始と次の単語の変更
+function StartOrNext() {
+	if (!editor || !orgRegion) {
+		return;
+	}
+
+	FindWords();
 
 	// 単語を設定
 	current = (current + 1) % words.length;
@@ -114,6 +123,12 @@ vscode.window.onDidChangeTextEditorSelection(event => {
 		return;
 	}
 
+	// マウスクリック
+	if (event.kind === vscode.TextEditorSelectionChangeKind.Mouse) {
+		cancelSyncEdit();
+		return;
+	}
+
 	// カーソルが動いたら選択を外す
 	const isEmpty = event.selections[0].isEmpty;
 	const hasSelection = isEmpty && prevNotEmpty;
@@ -133,24 +148,31 @@ vscode.window.onDidChangeTextEditorSelection(event => {
 		editor.revealRange(new vscode.Range(s, s));
 	}
 
-	// どの単語の範囲にいるかをチェック
-	for (let i = 0; i < words.length; i++) {
-		if (i === current) {
-			continue;
+	// 「今のキャレットが、どの selection に含まれているか」をチェック
+	const wordRange = editor.document.getWordRangeAtPosition(caret);
+	if (wordRange) {
+		if (!words[current].selections[0].intersection(wordRange)) {
+			// どの単語の範囲にいるかをチェック
+			for (let i = 0; i < words.length; i++) {
+				if (i === current) {
+					continue;
+				}
+
+				if (words[i].selections.some(sel => sel.contains(caret))) {
+					current = i;
+
+					editor.selections = words[i].selections;
+					const wordRanges = words[i].selections.map(sel =>
+						new vscode.Range(sel.start, sel.end)
+					);
+					editor.setDecorations(wordDeco!, wordRanges);
+					editor.setDecorations(backDeco!, [orgRegion]);
+				}
+			}
 		}
-
-		if (words[i].selections.some(sel => sel.contains(caret))) {
-			current = i;
-
-			editor.selections = words[i].selections;
-			const wordRanges = words[i].selections.map(sel =>
-				new vscode.Range(sel.start, sel.end)
-			);
-			editor.setDecorations(wordDeco!, wordRanges);
-			editor.setDecorations(backDeco!, [orgRegion]);
-
-			break;
-		}
+	}
+	else {
+		FindWords();
 	}
 });
 
