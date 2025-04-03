@@ -2,157 +2,203 @@ import * as vscode from 'vscode';
 import presets from './presets.json';
 
 const presetMap = presets as Record<string, { wordText: string; regionBg: string }>;
+const localize = vscode.l10n.t;
 
-let repeatedWordSelections: { word: string, selections: vscode.Selection[] }[] = [];
-let currentWordIndex = 0;
-let activeEditor: vscode.TextEditor | undefined = undefined;
-let syncEditWordDecoration: vscode.TextEditorDecorationType | undefined;
-let syncEditRegionDecoration: vscode.TextEditorDecorationType | undefined;
-let originalRegionRange: vscode.Range | undefined;
+let words: { word: string, selections: vscode.Selection[] }[] = [];
+let current = 0;
+let editor: vscode.TextEditor | undefined = undefined;
+let wordDeco: vscode.TextEditorDecorationType | undefined;
+let backDeco: vscode.TextEditorDecorationType | undefined;
+let orgRegion: vscode.Range | undefined;
+let editMode = false;
+let prevNotEmpty = false;
 
-function extractRepeatedWords(document: vscode.TextDocument, range: vscode.Range, editor: vscode.TextEditor) {
-	const selectedText = document.getText(range);
+// マッチする単語を探す
+function StartOrNext() {
+	if (!editor || !orgRegion) {
+		return [];
+	}
+
+	const doc = editor.document;
+	const selectedText = doc.getText(orgRegion);
+
 	if (!selectedText) {
 		return [];
 	}
 
-	const wordPattern = /\b\w+\b/g;
-	const wordMatches = [...selectedText.matchAll(wordPattern)];
-
+	// 単語を探す
+	const matches = [...selectedText.matchAll(/\b\w+\b/g)];
 	const wordMap = new Map<string, number[]>();
-	const baseOffset = document.offsetAt(range.start);
+	const baseOffset = doc.offsetAt(orgRegion.start);
 
-	for (const match of wordMatches) {
+	for (const match of matches) {
 		const word = match[0];
-		const offset = match.index!;
 		if (!wordMap.has(word)) {
 			wordMap.set(word, []);
 		}
-		wordMap.get(word)!.push(baseOffset + offset);
+		wordMap.get(word)!.push(baseOffset + match.index!);
 	}
 
-	const repeatedWords = Array.from(wordMap.entries())
+	const validWords = Array.from(wordMap.entries())
 		.filter(([_, positions]) => positions.length > 1);
 
-	const result = repeatedWords.map(([word, positions]) => ({
+	words = validWords.map(([word, positions]) => ({
 		word,
-		selections: positions.map(offset => {
-			const start = document.positionAt(offset);
-			const end = document.positionAt(offset + word.length);
-			return new vscode.Selection(end, start);
+		selections: positions.map(pos => {
+			return new vscode.Selection(
+				doc.positionAt(pos + word.length),
+				doc.positionAt(pos)
+			);
 		})
 	}));
 
-	// 装飾更新もここでやってしまう
-	const config = vscode.workspace.getConfiguration('syncEdit');
-	const preset = config.get<string>('colorPreset', 'custom');
+	// 単語を設定
+	current = (current + 1) % words.length;
+	editor.selections = words[current].selections;
 
-	let wordText = config.get<string>('wordTextColor', '#000000ff');
-	let regionBg = config.get<string>('regionBackgroundColor', '#264f78aa');
+	// 装飾
+	if (words.length > 0 && wordDeco && backDeco) {
+		const wordRanges =
+			words[current].selections.map(sel =>
+				new vscode.Range(sel.start, sel.end)
+			);
 
-	if (preset !== 'custom' && presetMap[preset]) {
-		wordText = presetMap[preset].wordText;
-		regionBg = presetMap[preset].regionBg;
+		editor.setDecorations(wordDeco, wordRanges);
+		editor.setDecorations(backDeco, [orgRegion]);
 	}
-
-	if (syncEditWordDecoration) {
-		syncEditWordDecoration.dispose();
-	}
-	syncEditWordDecoration = vscode.window.createTextEditorDecorationType({ color: wordText });
-
-	if (syncEditRegionDecoration) {
-		syncEditRegionDecoration.dispose();
-	}
-	syncEditRegionDecoration = vscode.window.createTextEditorDecorationType({ backgroundColor: regionBg });
-
-	if (result.length > 0) {
-		const wordRanges = result[currentWordIndex].selections.map(sel =>
-			new vscode.Range(sel.start, sel.end));
-		editor.setDecorations(syncEditWordDecoration, wordRanges);
-		editor.setDecorations(syncEditRegionDecoration, [range]);
-	}
-
-	return result;
 }
 
+// キャンセル
+function cancelSyncEdit() {
+	words = [];
+	current = 0;
+	orgRegion = undefined;
+
+	if (editor) {
+		editor.selections = [
+			new vscode.Selection(
+				editor.selection.active,
+				editor.selection.active
+			)
+		];
+	}
+	editor = undefined;
+
+	if (wordDeco) {
+		wordDeco.dispose();
+		wordDeco = undefined;
+	}
+	if (backDeco) {
+		backDeco.dispose();
+		backDeco = undefined;
+	}
+
+	if (editMode) {
+		editMode = false;
+		vscode.commands.executeCommand('setContext', 'syncEditMode', false);
+		vscode.window.showInformationMessage(localize('Exited SyncEdit'));
+	}
+}
+
+// キャレットが移動した時
+vscode.window.onDidChangeTextEditorSelection(event => {
+	if (!editor || event.textEditor !== editor || !orgRegion || !editMode || words.length === 0) {
+		return;
+	}
+
+	const caret = event.selections[0].active;
+
+	// 範囲外ならキャンセル
+	if (caret.isBefore(orgRegion.start) || caret.isAfter(orgRegion.end)) {
+		cancelSyncEdit();
+		return;
+	}
+
+	// カーソルが動いたら選択を外す
+	const isEmpty = event.selections[0].isEmpty;
+	const hasSelection = isEmpty && prevNotEmpty;
+	prevNotEmpty = !isEmpty;
+
+	const sel = words[current].selections[0];
+
+	if (sel.end.compareTo(caret) === 0 && hasSelection) {
+		const newSelections = words[current].selections.map(sel => {
+			const s = sel.start.translate(0, 1);
+			return new vscode.Selection(s, s);
+		});
+
+		editor.selections = newSelections;
+
+		var s = sel.start;
+		editor.revealRange(new vscode.Range(s, s));
+	}
+
+	// どの単語の範囲にいるかをチェック
+	for (let i = 0; i < words.length; i++) {
+		if (i === current) {
+			continue;
+		}
+
+		if (words[i].selections.some(sel => sel.contains(caret))) {
+			current = i;
+
+			editor.selections = words[i].selections;
+			const wordRanges = words[i].selections.map(sel =>
+				new vscode.Range(sel.start, sel.end)
+			);
+			editor.setDecorations(wordDeco!, wordRanges);
+			editor.setDecorations(backDeco!, [orgRegion]);
+
+			break;
+		}
+	}
+});
+
 export function activate(context: vscode.ExtensionContext) {
+	// 開始
 	context.subscriptions.push(vscode.commands.registerCommand('sync-edit.start', () => {
-		const editor = vscode.window.activeTextEditor;
+		editor = vscode.window.activeTextEditor;
 		if (!editor) {
 			return;
 		}
 
-		const document = editor.document;
+		// 装飾の初期設定
+		const config = vscode.workspace.getConfiguration('syncEdit');
+		const preset = config.get<string>('colorPreset', 'custom');
+
+		let wordText = config.get<string>('wordTextColor', '#000000ff');
+		let regionBg = config.get<string>('regionBackgroundColor', '#264f78aa');
+
+		if (preset !== 'custom' && presetMap[preset]) {
+			wordText = presetMap[preset].wordText;
+			regionBg = presetMap[preset].regionBg;
+		}
+
+		wordDeco = vscode.window.createTextEditorDecorationType({ color: wordText });
+		backDeco = vscode.window.createTextEditorDecorationType({ backgroundColor: regionBg });
+
 		const selection = editor.selection;
-		originalRegionRange = new vscode.Range(selection.start, selection.end);
+		orgRegion = new vscode.Range(selection.start, selection.end);
+		current = -1;
 
-		const result = extractRepeatedWords(document, originalRegionRange, editor);
-		if (result.length === 0) {
-			return;
+		StartOrNext();
+
+		if (words.length !== 0) {
+			editMode = true;
+			vscode.commands.executeCommand('setContext', 'syncEditMode', true);
+			vscode.window.showInformationMessage(localize('Start SyncEdit'));
 		}
-
-		repeatedWordSelections = result;
-		currentWordIndex = 0;
-		activeEditor = editor;
-		editor.selections = repeatedWordSelections[currentWordIndex].selections;
-
-		vscode.commands.executeCommand('setContext', 'syncEditMode', true);
 	}));
 
+	// 次の単語
 	context.subscriptions.push(vscode.commands.registerCommand('sync-edit.nextWord', () => {
-		if (!activeEditor || !originalRegionRange) {
-			return;
+		if (editor && orgRegion) {
+			StartOrNext();
 		}
-
-		const result = extractRepeatedWords(activeEditor.document, originalRegionRange, activeEditor);
-		if (result.length === 0) {
-			return;
-		}
-
-		repeatedWordSelections = result;
-		currentWordIndex = (currentWordIndex + 1) % repeatedWordSelections.length;
-		activeEditor.selections = repeatedWordSelections[currentWordIndex].selections;
 	}));
 
-	function cancelSyncEdit() {
-		repeatedWordSelections = [];
-		currentWordIndex = 0;
-		originalRegionRange = undefined;
-
-		if (activeEditor) {
-			activeEditor.selections = [new vscode.Selection(activeEditor.selection.active, activeEditor.selection.active)];
-		}
-		activeEditor = undefined;
-
-		if (syncEditWordDecoration) {
-			syncEditWordDecoration.dispose();
-			syncEditWordDecoration = undefined;
-		}
-		if (syncEditRegionDecoration) {
-			syncEditRegionDecoration.dispose();
-			syncEditRegionDecoration = undefined;
-		}
-
-		vscode.commands.executeCommand('setContext', 'syncEditMode', false);
-	}
-
+	// 終了
 	context.subscriptions.push(vscode.commands.registerCommand('sync-edit.cancel', () => {
 		cancelSyncEdit();
 	}));
-
-	vscode.window.onDidChangeTextEditorSelection(event => {
-		if (!activeEditor || event.textEditor !== activeEditor || repeatedWordSelections.length === 0) {
-			return;
-		}
-
-		const isSingleCursor = event.selections.length === 1;
-		const movedOutside = event.selections.some(sel =>
-			sel.active.isBefore(originalRegionRange!.start) ||
-			sel.active.isAfter(originalRegionRange!.end)
-		);
-
-		if (isSingleCursor || movedOutside) {
-			cancelSyncEdit();
-		}
-	});
 }
