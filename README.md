@@ -11,7 +11,7 @@ It brings the Delphi-style synchronized editing experience to VSCode.
 
 ## Demo
 
-![SyncEdit demo](./syncedit.gif)
+![SyncEdit demo](https://github.com/freeonterminate/SyncEditVS/blob/main/syncedit.gif?raw=true)
 
 ---
 

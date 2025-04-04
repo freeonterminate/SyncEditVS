@@ -3,7 +3,8 @@
   "displayName": "%displayName%",
   "description": "%description%",
   "publisher": "piksware",
-  "version": "1.0.0",
+  "icon": "./icon.png",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.98.0"
   },

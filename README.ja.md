@@ -8,7 +8,7 @@ Delphi の SyncEdit 機能を VSCode に再現する拡張機能です。
 Delphi の「同期編集（SyncEdit）」と同様の体験を VSCode 上で実現できます。
 
 ## デモ
-![SyncEdit demo](./syncedit.gif)
+![SyncEdit demo](https://github.com/freeonterminate/SyncEditVS/blob/main/syncedit.gif?raw=true)
 
 ---
 
