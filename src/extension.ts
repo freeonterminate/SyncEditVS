@@ -77,6 +77,86 @@ function StartOrNext() {
 	}
 }
 
+// キャレットが移動した時
+vscode.window.onDidChangeTextEditorSelection(event => {
+	if (!editor || event.textEditor !== editor || !orgRegion || !editMode || words.length === 0) {
+		return;
+	}
+
+	const caret = event.selections[0].active;
+
+	// 範囲外ならキャンセル
+	if (caret.isBefore(orgRegion.start) || caret.isAfter(orgRegion.end)) {
+		cancelSyncEdit();
+		return;
+	}
+
+	const wordRange = editor.document.getWordRangeAtPosition(caret);
+
+	// マウスクリック
+	if (event.kind === vscode.TextEditorSelectionChangeKind.Mouse) {
+		if (wordRange) {
+			for (let i = 0; i < words.length; i++) {
+				if (words[i].selections.some(sel => sel.contains(caret))) {
+					editor.selections = words[i].selections;
+					break;
+				}
+			}
+		}
+		else {
+			cancelSyncEdit();
+		}
+
+		return;
+	}
+
+	// キャレットが動いたら選択を外す
+	const isEmpty = event.selections[0].isEmpty;
+	const hasSelection = isEmpty && prevNotEmpty;
+	prevNotEmpty = !isEmpty;
+
+	const sel = words[current].selections[0];
+
+	if (sel.end.compareTo(caret) === 0 && hasSelection) {
+		const newSelections = words[current].selections.map(sel => {
+			const s = sel.start.translate(0, 1);
+			return new vscode.Selection(s, s);
+		});
+
+		editor.selections = newSelections;
+
+		var s = sel.start;
+		editor.revealRange(new vscode.Range(s, s));
+	}
+
+	// キャレットがどの単語の範囲にいるかをチェック
+	if (wordRange) {
+		if (!words[current].selections[0].intersection(wordRange)) {
+			for (let i = 0; i < words.length; i++) {
+				if (i === current) {
+					continue;
+				}
+
+				if (words[i].selections.some(sel => sel.contains(caret))) {
+					current = i;
+
+					editor.selections = words[i].selections;
+					const wordRanges = words[i].selections.map(sel =>
+						new vscode.Range(sel.start, sel.end)
+					);
+					editor.setDecorations(wordDeco!, wordRanges);
+					editor.setDecorations(backDeco!, [orgRegion]);
+
+					break;
+				}
+			}
+		}
+	}
+	else {
+		FindWords();
+	}
+});
+
 // キャンセル
 function cancelSyncEdit() {
 	words = [];
@@ -97,6 +177,7 @@ function cancelSyncEdit() {
 		wordDeco.dispose();
 		wordDeco = undefined;
 	}
+
 	if (backDeco) {
 		backDeco.dispose();
 		backDeco = undefined;
@@ -108,73 +189,6 @@ function cancelSyncEdit() {
 		vscode.window.showInformationMessage(localize('Exited SyncEdit'));
 	}
 }
-
-// キャレットが移動した時
-vscode.window.onDidChangeTextEditorSelection(event => {
-	if (!editor || event.textEditor !== editor || !orgRegion || !editMode || words.length === 0) {
-		return;
-	}
-
-	const caret = event.selections[0].active;
-
-	// 範囲外ならキャンセル
-	if (caret.isBefore(orgRegion.start) || caret.isAfter(orgRegion.end)) {
-		cancelSyncEdit();
-		return;
-	}
-
-	// マウスクリック
-	if (event.kind === vscode.TextEditorSelectionChangeKind.Mouse) {
-		cancelSyncEdit();
-		return;
-	}
-
-	// カーソルが動いたら選択を外す
-	const isEmpty = event.selections[0].isEmpty;
-	const hasSelection = isEmpty && prevNotEmpty;
-	prevNotEmpty = !isEmpty;
-
-	const sel = words[current].selections[0];
-
-	if (sel.end.compareTo(caret) === 0 && hasSelection) {
-		const newSelections = words[current].selections.map(sel => {
-			const s = sel.start.translate(0, 1);
-			return new vscode.Selection(s, s);
-		});
-
-		editor.selections = newSelections;
-
-		var s = sel.start;
-		editor.revealRange(new vscode.Range(s, s));
-	}
-
-	// 「今のキャレットが、どの selection に含まれているか」をチェック
-	const wordRange = editor.document.getWordRangeAtPosition(caret);
-	if (wordRange) {
-		if (!words[current].selections[0].intersection(wordRange)) {
-			// どの単語の範囲にいるかをチェック
-			for (let i = 0; i < words.length; i++) {
-				if (i === current) {
-					continue;
-				}
-
-				if (words[i].selections.some(sel => sel.contains(caret))) {
-					current = i;
-
-					editor.selections = words[i].selections;
-					const wordRanges = words[i].selections.map(sel =>
-						new vscode.Range(sel.start, sel.end)
-					);
-					editor.setDecorations(wordDeco!, wordRanges);
-					editor.setDecorations(backDeco!, [orgRegion]);
-				}
-			}
-		}
-	}
-	else {
-		FindWords();
-	}
-});
 
 export function activate(context: vscode.ExtensionContext) {
 	// 開始
@@ -214,9 +228,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// 次の単語
 	context.subscriptions.push(vscode.commands.registerCommand('sync-edit.nextWord', () => {
-		if (editor && orgRegion) {
-			StartOrNext();
-		}
+		StartOrNext();
 	}));
 
 	// 終了

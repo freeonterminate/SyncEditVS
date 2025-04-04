@@ -9,6 +9,10 @@ A Visual Studio Code extension that replicates Delphi's SyncEdit feature.
 SyncEdit detects words that appear multiple times within a selected range and allows you to edit all instances at once using multi-cursor editing.  
 It brings the Delphi-style synchronized editing experience to VSCode.
 
+## Demo
+
+![SyncEdit demo](./syncedit.gif)
+
 ---
 
 ## Features
@@ -43,7 +47,7 @@ It brings the Delphi-style synchronized editing experience to VSCode.
 "syncEdit.regionBackgroundColor": "#264f78aa"
 ```
 
-- `colorPreset`: choose from `"dark"`, `"light"`, `"highcontrast"`, `"fun"`
+- `colorPreset`: choose from `"fun"`, `"dark"`, `"light"`, `"high-contrast"`
 - `"custom"` allows custom color settings below to take effect
 - Colors should be in RGBA format (e.g. `#ff0000cc`)
 

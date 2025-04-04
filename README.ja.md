@@ -7,6 +7,9 @@ Delphi の SyncEdit 機能を VSCode に再現する拡張機能です。
 選択範囲内に複数回出現する単語を検出し、それらをマルチカーソルで一括編集できるようにします。  
 Delphi の「同期編集（SyncEdit）」と同様の体験を VSCode 上で実現できます。
 
+## デモ
+![SyncEdit demo](./syncedit.gif)
+
 ---
 
 ## 主な機能
@@ -41,7 +44,7 @@ Delphi の「同期編集（SyncEdit）」と同様の体験を VSCode 上で実
 "syncEdit.regionBackgroundColor": "#264f78aa"
 ```
 
-- `colorPreset`: `"dark"`, `"light"`, `"highcontrast"`, `"fun"` などから選択可能
+- `colorPreset`:  `"fun"`, `"dark"`, `"light"`, `"high-contrast"` から選択可能
 - `"custom"` を選ぶと下の色設定が有効になります
 - 色は RGBA 形式で指定できます（例: `#ff0000cc`）
 
